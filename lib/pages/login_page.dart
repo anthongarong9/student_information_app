@@ -12,33 +12,63 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _confirmPassword = TextEditingController();
   bool _loading = false;
-  bool _hidePassword = true; // true = password is hidden
+  bool _hidePassword = true;
+  bool _hideConfirmPassword = true;
+  bool _isRegistering = false;
 
   @override
   void dispose() {
     _email.dispose();
     _password.dispose();
+    _confirmPassword.dispose();
     super.dispose();
   }
 
-  Future<void> _login() async {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _email.text.trim(),
-        password: _password.text,
-      );
-      // main.dart automatically opens the home page after login.
+      if (_isRegistering) {
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: _email.text.trim(),
+          password: _password.text,
+        );
+      } else {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: _email.text.trim(),
+          password: _password.text,
+        );
+      }
+      // main.dart routes authenticated users to the home page.
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message ?? 'Unable to log in.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.message ??
+                (_isRegistering
+                    ? 'Unable to create your account.'
+                    : 'Unable to log in.'),
+          ),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _toggleMode() {
+    if (_loading) return;
+    setState(() {
+      _isRegistering = !_isRegistering;
+      _formKey.currentState?.reset();
+      _password.clear();
+      _confirmPassword.clear();
+      _hidePassword = true;
+      _hideConfirmPassword = true;
+    });
   }
 
   @override
@@ -75,17 +105,22 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Title and subtitle
-                      const Text(
-                        'Welcome to Student Hub!',
-                        style: TextStyle(
+                      Text(
+                        _isRegistering
+                            ? 'Create your account'
+                            : 'Welcome to Student Hub!',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 6),
-                      const Text(
-                        'Log in to manage your students',
+                      Text(
+                        _isRegistering
+                            ? 'Register to start managing your students'
+                            : 'Log in to manage your students',
+                        textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.grey),
                       ),
                       const SizedBox(height: 28),
@@ -116,7 +151,13 @@ class _LoginPageState extends State<LoginPage> {
                         controller: _password,
                         obscureText: _hidePassword,
                         textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (value) => _login(),
+                        onFieldSubmitted: (_) {
+                          if (_isRegistering) {
+                            FocusScope.of(context).nextFocus();
+                          } else {
+                            _submit();
+                          }
+                        },
                         decoration: InputDecoration(
                           labelText: 'Password',
                           prefixIcon: const Icon(Icons.lock_outline),
@@ -140,17 +181,59 @@ class _LoginPageState extends State<LoginPage> {
                           if (value == null || value.isEmpty) {
                             return 'Enter your password';
                           }
+                          if (_isRegistering && value.length < 6) {
+                            return 'Password must be at least 6 characters';
+                          }
                           return null;
                         },
                       ),
+                      if (_isRegistering) ...[
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _confirmPassword,
+                          obscureText: _hideConfirmPassword,
+                          textInputAction: TextInputAction.done,
+                          onFieldSubmitted: (_) => _submit(),
+                          decoration: InputDecoration(
+                            labelText: 'Confirm password',
+                            prefixIcon: const Icon(Icons.lock_reset_outlined),
+                            suffixIcon: IconButton(
+                              tooltip: _hideConfirmPassword
+                                  ? 'Show password'
+                                  : 'Hide password',
+                              icon: Icon(
+                                _hideConfirmPassword
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _hideConfirmPassword = !_hideConfirmPassword;
+                                });
+                              },
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Confirm your password';
+                            }
+                            if (value != _password.text) {
+                              return 'Passwords do not match';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 24),
 
-                      // Login button
                       SizedBox(
                         width: double.infinity,
                         height: 50,
                         child: FilledButton(
-                          onPressed: _loading ? null : _login,
+                          onPressed: _loading ? null : _submit,
                           child: _loading
                               ? const SizedBox(
                                   height: 22,
@@ -160,10 +243,19 @@ class _LoginPageState extends State<LoginPage> {
                                     color: Colors.white,
                                   ),
                                 )
-                              : const Text(
-                                  'Login',
-                                  style: TextStyle(fontSize: 16),
+                              : Text(
+                                  _isRegistering ? 'Create account' : 'Login',
+                                  style: const TextStyle(fontSize: 16),
                                 ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: _loading ? null : _toggleMode,
+                        child: Text(
+                          _isRegistering
+                              ? 'Already have an account? Log in'
+                              : 'New to Student Hub? Create an account',
                         ),
                       ),
                     ],
