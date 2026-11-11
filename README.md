@@ -1,17 +1,20 @@
-# student_information_app
+# Student Information App
 
-A new Flutter project.
+A Flutter mobile app for managing student records.
 
-## Getting Started
+## Features
+- Login with Firebase Authentication
+- Dashboard with the total student count
+- Add, view, edit, and delete students (Cloud Firestore)
+- Search students by name, number, course, or email
+- Account settings with password change and logout
+- App bar and bottom navigation
 
-This project is a starting point for a Flutter application.
+## Tech used
+Flutter, Dart, Firebase Authentication, Cloud Firestore
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## How to run
+1. Install Flutter and Android Studio.
+2. Run `flutter pub get`.
+3. Connect your own Firebase project with `flutterfire configure`.
+4. Run `flutter run`.
